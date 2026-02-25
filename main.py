@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 
 GRID_W, GRID_H = 25, 20
+SPEED_MS = 150
 
 
 @dataclass(frozen=True)
@@ -47,7 +48,18 @@ def main() -> None:
     canvas.pack(fill="both", expand=True)
 
     snake = [Point(12, 10), Point(11, 10), Point(10, 10)]
+    direction = Point(1, 0)
+
+    def step():
+        nonlocal snake
+        head = snake[0]
+        new_head = Point(head.x + direction.x, head.y + direction.y)
+        snake = [new_head] + snake[:-1]
+        render(canvas, snake)
+        root.after(SPEED_MS, step)
+
     canvas.bind("<Configure>", lambda e: render(canvas, snake))
+    root.after(SPEED_MS, step)
 
     root.mainloop()
 
