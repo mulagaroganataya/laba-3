@@ -1,10 +1,25 @@
 import tkinter as tk
+from dataclasses import dataclass
 
 
 GRID_W, GRID_H = 25, 20
 
 
-def draw_grid(canvas: tk.Canvas) -> None:
+@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int
+
+
+def draw_cell(canvas: tk.Canvas, p: Point, cell: int, ox: int, oy: int, fill: str) -> None:
+    x1 = ox + p.x * cell
+    y1 = oy + p.y * cell
+    x2 = x1 + cell
+    y2 = y1 + cell
+    canvas.create_rectangle(x1, y1, x2, y2, fill=fill, outline="black")
+
+
+def render(canvas: tk.Canvas, snake: list[Point]) -> None:
     canvas.delete("all")
     w = canvas.winfo_width()
     h = canvas.winfo_height()
@@ -19,13 +34,8 @@ def draw_grid(canvas: tk.Canvas) -> None:
 
     canvas.create_rectangle(ox, oy, ox + field_w, oy + field_h, outline="black")
 
-    # легкая сетка
-    for x in range(GRID_W + 1):
-        x1 = ox + x * cell
-        canvas.create_line(x1, oy, x1, oy + field_h, fill="#ddd")
-    for y in range(GRID_H + 1):
-        y1 = oy + y * cell
-        canvas.create_line(ox, y1, ox + field_w, y1, fill="#ddd")
+    for i, p in enumerate(snake):
+        draw_cell(canvas, p, cell, ox, oy, fill=("green" if i == 0 else "darkgreen"))
 
 
 def main() -> None:
@@ -36,7 +46,8 @@ def main() -> None:
     canvas = tk.Canvas(root, bg="white", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
 
-    canvas.bind("<Configure>", lambda e: draw_grid(canvas))
+    snake = [Point(12, 10), Point(11, 10), Point(10, 10)]
+    canvas.bind("<Configure>", lambda e: render(canvas, snake))
 
     root.mainloop()
 
