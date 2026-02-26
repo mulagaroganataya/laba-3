@@ -49,12 +49,30 @@ def main() -> None:
 
     snake = [Point(12, 10), Point(11, 10), Point(10, 10)]
     direction = Point(1, 0)
+    pending: Point | None = None
+
+    def request_turn(dx: int, dy: int) -> None:
+        nonlocal pending, direction
+        nd = Point(dx, dy)
+        if nd.x == -direction.x and nd.y == -direction.y:
+            return
+        pending = nd
+
+    root.bind("<Up>", lambda e: request_turn(0, -1))
+    root.bind("<Down>", lambda e: request_turn(0, 1))
+    root.bind("<Left>", lambda e: request_turn(-1, 0))
+    root.bind("<Right>", lambda e: request_turn(1, 0))
 
     def step():
-        nonlocal snake
+        nonlocal snake, direction, pending
+        if pending is not None:
+            direction = pending
+            pending = None
+
         head = snake[0]
         new_head = Point(head.x + direction.x, head.y + direction.y)
         snake = [new_head] + snake[:-1]
+
         render(canvas, snake)
         root.after(SPEED_MS, step)
 
