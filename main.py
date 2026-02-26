@@ -1,5 +1,6 @@
 import tkinter as tk
 from dataclasses import dataclass
+import random
 
 
 GRID_W, GRID_H = 25, 20
@@ -20,7 +21,7 @@ def draw_cell(canvas: tk.Canvas, p: Point, cell: int, ox: int, oy: int, fill: st
     canvas.create_rectangle(x1, y1, x2, y2, fill=fill, outline="black")
 
 
-def render(canvas: tk.Canvas, snake: list[Point]) -> None:
+def render(canvas: tk.Canvas, snake: list[Point], food: Point | None) -> None:
     canvas.delete("all")
     w = canvas.winfo_width()
     h = canvas.winfo_height()
@@ -35,8 +36,16 @@ def render(canvas: tk.Canvas, snake: list[Point]) -> None:
 
     canvas.create_rectangle(ox, oy, ox + field_w, oy + field_h, outline="black")
 
+    if food is not None:
+        draw_cell(canvas, food, cell, ox, oy, fill="red")
+
     for i, p in enumerate(snake):
         draw_cell(canvas, p, cell, ox, oy, fill=("green" if i == 0 else "darkgreen"))
+
+
+def spawn_food(snake: list[Point]) -> Point:
+    empty = [Point(x, y) for x in range(GRID_W) for y in range(GRID_H) if Point(x, y) not in snake]
+    return random.choice(empty)
 
 
 def main() -> None:
@@ -50,6 +59,7 @@ def main() -> None:
     snake = [Point(12, 10), Point(11, 10), Point(10, 10)]
     direction = Point(1, 0)
     pending: Point | None = None
+    food = spawn_food(snake)
 
     def request_turn(dx: int, dy: int) -> None:
         nonlocal pending, direction
@@ -64,19 +74,25 @@ def main() -> None:
     root.bind("<Right>", lambda e: request_turn(1, 0))
 
     def step():
-        nonlocal snake, direction, pending
+        nonlocal snake, direction, pending, food
         if pending is not None:
             direction = pending
             pending = None
 
         head = snake[0]
         new_head = Point(head.x + direction.x, head.y + direction.y)
-        snake = [new_head] + snake[:-1]
 
-        render(canvas, snake)
+        snake.insert(0, new_head)
+
+        if new_head == food:
+            food = spawn_food(snake)
+        else:
+            snake.pop()
+
+        render(canvas, snake, food)
         root.after(SPEED_MS, step)
 
-    canvas.bind("<Configure>", lambda e: render(canvas, snake))
+    canvas.bind("<Configure>", lambda e: render(canvas, snake, food))
     root.after(SPEED_MS, step)
 
     root.mainloop()
