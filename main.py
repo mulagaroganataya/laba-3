@@ -52,7 +52,16 @@ def spawn_food(snake: list[Point]) -> Point:
 def main() -> None:
     root = tk.Tk()
     root.title("Snake")
-    root.geometry("600x480")
+    root.geometry("600x520")
+
+    top = tk.Frame(root)
+    top.pack(fill="x")
+
+    status_var = tk.StringVar(value="Готово. Играй стрелками.")
+    tk.Label(top, textvariable=status_var, anchor="w").pack(side="left", padx=8, pady=6, fill="x", expand=True)
+
+    score_var = tk.StringVar(value="Счёт: 0")
+    tk.Label(top, textvariable=score_var, anchor="e").pack(side="right", padx=8)
 
     canvas = tk.Canvas(root, bg="white", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
@@ -62,6 +71,7 @@ def main() -> None:
     pending: Point | None = None
     food = spawn_food(snake)
     running = True
+    score = 0
 
     def request_turn(dx: int, dy: int) -> None:
         nonlocal pending, direction
@@ -78,10 +88,11 @@ def main() -> None:
     def game_over(reason: str) -> None:
         nonlocal running
         running = False
-        messagebox.showinfo("Конец игры", reason)
+        status_var.set(f"Конец игры: {reason}")
+        messagebox.showinfo("Конец игры", f"{reason}\nСчёт: {score}")
 
     def step():
-        nonlocal snake, direction, pending, food, running
+        nonlocal snake, direction, pending, food, running, score
         if not running:
             return
 
@@ -92,19 +103,20 @@ def main() -> None:
         head = snake[0]
         new_head = Point(head.x + direction.x, head.y + direction.y)
 
-        # wall
         if not (0 <= new_head.x < GRID_W and 0 <= new_head.y < GRID_H):
-            game_over("Столкновение со стеной")
+            game_over("Стена")
             return
 
-        # self
         if new_head in snake:
-            game_over("Столкновение с собой")
+            game_over("Сам в себя")
             return
 
         snake.insert(0, new_head)
 
         if new_head == food:
+            score += 1
+            score_var.set(f"Счёт: {score}")
+            status_var.set("Съел еду!")
             food = spawn_food(snake)
         else:
             snake.pop()
