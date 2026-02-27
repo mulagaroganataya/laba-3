@@ -1,6 +1,7 @@
 import tkinter as tk
 from dataclasses import dataclass
 import random
+from tkinter import messagebox
 
 
 GRID_W, GRID_H = 25, 20
@@ -60,6 +61,7 @@ def main() -> None:
     direction = Point(1, 0)
     pending: Point | None = None
     food = spawn_food(snake)
+    running = True
 
     def request_turn(dx: int, dy: int) -> None:
         nonlocal pending, direction
@@ -73,14 +75,32 @@ def main() -> None:
     root.bind("<Left>", lambda e: request_turn(-1, 0))
     root.bind("<Right>", lambda e: request_turn(1, 0))
 
+    def game_over(reason: str) -> None:
+        nonlocal running
+        running = False
+        messagebox.showinfo("Конец игры", reason)
+
     def step():
-        nonlocal snake, direction, pending, food
+        nonlocal snake, direction, pending, food, running
+        if not running:
+            return
+
         if pending is not None:
             direction = pending
             pending = None
 
         head = snake[0]
         new_head = Point(head.x + direction.x, head.y + direction.y)
+
+        # wall
+        if not (0 <= new_head.x < GRID_W and 0 <= new_head.y < GRID_H):
+            game_over("Столкновение со стеной")
+            return
+
+        # self
+        if new_head in snake:
+            game_over("Столкновение с собой")
+            return
 
         snake.insert(0, new_head)
 
