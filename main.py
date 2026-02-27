@@ -54,10 +54,16 @@ def main() -> None:
     root.title("Snake")
     root.geometry("600x520")
 
+    # menu
+    menubar = tk.Menu(root)
+    game_menu = tk.Menu(menubar, tearoff=0)
+    menubar.add_cascade(label="Игра", menu=game_menu)
+    root.config(menu=menubar)
+
     top = tk.Frame(root)
     top.pack(fill="x")
 
-    status_var = tk.StringVar(value="Готово. Играй стрелками.")
+    status_var = tk.StringVar(value="Готово. Игра → Новая игра.")
     tk.Label(top, textvariable=status_var, anchor="w").pack(side="left", padx=8, pady=6, fill="x", expand=True)
 
     score_var = tk.StringVar(value="Счёт: 0")
@@ -66,15 +72,30 @@ def main() -> None:
     canvas = tk.Canvas(root, bg="white", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
 
-    snake = [Point(12, 10), Point(11, 10), Point(10, 10)]
+    # state
+    snake: list[Point] = []
+    food: Point | None = None
     direction = Point(1, 0)
     pending: Point | None = None
-    food = spawn_food(snake)
-    running = True
+    running = False
     score = 0
+
+    def new_game() -> None:
+        nonlocal snake, food, direction, pending, running, score
+        score = 0
+        score_var.set("Счёт: 0")
+        status_var.set("Игра началась! Стрелки — движение.")
+        direction = Point(1, 0)
+        pending = None
+        snake = [Point(12, 10), Point(11, 10), Point(10, 10)]
+        food = spawn_food(snake)
+        running = True
+        render(canvas, snake, food)
 
     def request_turn(dx: int, dy: int) -> None:
         nonlocal pending, direction
+        if not running:
+            return
         nd = Point(dx, dy)
         if nd.x == -direction.x and nd.y == -direction.y:
             return
@@ -88,41 +109,40 @@ def main() -> None:
     def game_over(reason: str) -> None:
         nonlocal running
         running = False
-        status_var.set(f"Конец игры: {reason}")
+        status_var.set(f"Конец игры: {reason}. Игра → Новая игра.")
         messagebox.showinfo("Конец игры", f"{reason}\nСчёт: {score}")
 
     def step():
         nonlocal snake, direction, pending, food, running, score
-        if not running:
-            return
+        if running:
+            if pending is not None:
+                direction = pending
+                pending = None
 
-        if pending is not None:
-            direction = pending
-            pending = None
+            head = snake[0]
+            new_head = Point(head.x + direction.x, head.y + direction.y)
 
-        head = snake[0]
-        new_head = Point(head.x + direction.x, head.y + direction.y)
+            if not (0 <= new_head.x < GRID_W and 0 <= new_head.y < GRID_H):
+                game_over("Стена")
+            elif new_head in snake:
+                game_over("Сам в себя")
+            else:
+                snake.insert(0, new_head)
+                if food is not None and new_head == food:
+                    score += 1
+                    score_var.set(f"Счёт: {score}")
+                    food = spawn_food(snake)
+                else:
+                    snake.pop()
 
-        if not (0 <= new_head.x < GRID_W and 0 <= new_head.y < GRID_H):
-            game_over("Стена")
-            return
+                render(canvas, snake, food)
 
-        if new_head in snake:
-            game_over("Сам в себя")
-            return
-
-        snake.insert(0, new_head)
-
-        if new_head == food:
-            score += 1
-            score_var.set(f"Счёт: {score}")
-            status_var.set("Съел еду!")
-            food = spawn_food(snake)
-        else:
-            snake.pop()
-
-        render(canvas, snake, food)
         root.after(SPEED_MS, step)
+
+    # menu commands
+    game_menu.add_command(label="Новая игра", command=new_game)
+    game_menu.add_separator()
+    game_menu.add_command(label="Выход", command=root.destroy)
 
     canvas.bind("<Configure>", lambda e: render(canvas, snake, food))
     root.after(SPEED_MS, step)
